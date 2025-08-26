@@ -1,25 +1,19 @@
-import { createComparison, defaultRules } from "../lib/compare.js";
+export function initFiltering() {
+  const updateIndexes = (elements, indexes) => {
+    Object.keys(indexes).forEach((elementName) => {
+      const select = elements[elementName];
+      if (!select) return;
 
-// @todo: #4.3 — настроить компаратор
-const compare = createComparison(defaultRules);
-export function initFiltering(elements, indexes) {
-  // @todo: #4.1 — заполнить выпадающие списки опциями
-  Object.keys(indexes) // Получаем ключи из объекта
-    .forEach((elementName) => {
-      // Перебираем по именам
-      elements[elementName].append(
-        // в каждый элемент добавляем опции
-        ...Object.values(indexes[elementName]) // формируем массив имён, значений опций
-          .map((name) => {
-            // используйте name как значение и текстовое содержимое
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            return option; // @todo: создать и вернуть тег опции
-          })
-      );
+      Object.values(indexes[elementName]).forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
     });
-  return (data, state, action) => {
+  };
+
+  const applyFiltering = (query, state, action) => {
     // @todo: #4.2 — обработать очистку поля
     if (action && action.name === "clear") {
       const field = action.dataset.field;
@@ -30,11 +24,25 @@ export function initFiltering(elements, indexes) {
         input.value = "";
       }
 
-      state[field] = "";
+      const { [field]: removed, ...newQuery } = query;
+      return newQuery;
     }
 
-    // @todo: #4.5 — отфильтровать данные используя компаратор
-    return data.filter((row) => compare(row, state));
-    //return data;
+    const filter = {};
+    Object.keys(state).forEach((key) => {
+      if (
+        ["seller", "customer", "date", "totalFrom", "totalTo"].includes(key) &&
+        state[key]
+      ) {
+        filter[`filter[${key}]`] = state[key];
+      }
+    });
+
+    return Object.keys(filter).length ? { ...query, ...filter } : query;
+  };
+
+  return {
+    updateIndexes,
+    applyFiltering,
   };
 }
